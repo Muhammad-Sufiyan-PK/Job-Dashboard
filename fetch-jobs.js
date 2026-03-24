@@ -26,12 +26,17 @@ for (const keyword of searches) {
     const run = await client.actor("igview-owner/google-jobs-scraper").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
+    // Log first item to see actual field names
+    if (items.length > 0) {
+      console.log("Sample fields:", Object.keys(items[0]).join(", "));
+    }
+
     const normalized = items.map(item => ({
       title: item.title || item.jobTitle || item.job_title || "Untitled",
       companyName: item.companyName || item.company || item.company_name || "Unknown",
       location: item.location || "Remote",
       datePosted: item.datePosted || item.date || item.posted || "N/A",
-      jobUrl: item.applyUrl || item.applyLink || item.jobUrl || item.link || item.URL || "#",
+      jobUrl: item.applyUrl || item.applyLink || item.jobUrl || item.link || item.URL || item.url || item.sourceUrl || "",
     }));
 
     allJobs = [...allJobs, ...normalized];
@@ -41,10 +46,12 @@ for (const keyword of searches) {
   }
 }
 
+// Deduplicate by title + company instead of URL
 const seen = new Set();
 const uniqueJobs = allJobs.filter(job => {
-  if (!job.jobUrl || job.jobUrl === "#" || seen.has(job.jobUrl)) return false;
-  seen.add(job.jobUrl);
+  const key = `${job.title}|${job.companyName}`.toLowerCase();
+  if (seen.has(key)) return false;
+  seen.add(key);
   return true;
 });
 
