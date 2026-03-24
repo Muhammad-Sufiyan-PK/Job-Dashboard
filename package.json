@@ -1,0 +1,11 @@
+{
+  "name": "job-dashboard",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "fetch": "node fetch-jobs.js"
+  },
+  "dependencies": {
+    "apify-client": "^2.11.0"
+  }
+}
