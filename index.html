@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Muhammad Sufiyan — Job Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f6f9; color: #333; padding: 2rem; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.25rem; color: #1a1a2e; }
+    .subtitle { color: #666; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .stats { background: #1a1a2e; color: white; padding: 0.75rem 1.25rem; border-radius: 8px;
+             display: inline-block; margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .filters { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; }
+    input, select { padding: 0.55rem 0.85rem; border: 1px solid #ddd; border-radius: 6px;
+                    font-size: 0.9rem; background: white; }
+    input { flex: 1; min-width: 220px; }
+    .tag { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px;
+           font-size: 0.75rem; font-weight: 600; margin-right: 0.35rem; }
+    .tag-research { background: #e0f0ff; color: #0066cc; }
+    .tag-program { background: #e6f9ec; color: #1a7a3c; }
+    .tag-data { background: #fff4e0; color: #b35900; }
+    .tag-me { background: #f3e8ff; color: #6b21a8; }
+    .tag-remote { background: #e8f5e9; color: #2e7d32; }
+    .job-card { background: white; border-radius: 10px; padding: 1.1rem 1.3rem;
+                margin-bottom: 1rem; border-left: 4px solid #1a1a2e;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .job-title a { font-size: 1.05rem; font-weight: 700; color: #1a1a2e; text-decoration: none; }
+    .job-title a:hover { text-decoration: underline; }
+    .job-meta { color: #666; font-size: 0.85rem; margin: 0.35rem 0 0.6rem; }
+    .no-results { text-align: center; color: #999; padding: 3rem; }
+  </style>
+</head>
+<body>
+
+  <h1>🧑‍💼 Muhammad Sufiyan — Job Dashboard</h1>
+  <p class="subtitle">Live remote part-time opportunities in Research, Program Management & Data Analytics</p>
+  <div class="stats" id="stats">Loading jobs...</div>
+
+  <div class="filters">
+    <input id="search" placeholder="🔍 Search by title, company, or keyword..." />
+    <select id="category">
+      <option value="">All Categories</option>
+      <option value="research">Research</option>
+      <option value="program">Program Management</option>
+      <option value="data">Data Analytics</option>
+      <option value="m&e">Monitoring & Evaluation</option>
+    </select>
+    <select id="sort">
+      <option value="newest">Newest First</option>
+      <option value="oldest">Oldest First</option>
+    </select>
+  </div>
+
+  <div id="jobs-container"></div>
+
+  <script>
+    let allJobs = [];
+
+    // Tag jobs based on title keywords
+    function categorize(title = "") {
+      const t = title.toLowerCase();
+      const tags = [];
+      if (t.includes("research") || t.includes("analyst")) tags.push({ label: "Research", cls: "tag-research" });
+      if (t.includes("program") || t.includes("coordinator") || t.includes("manager")) tags.push({ label: "Program Mgmt", cls: "tag-program" });
+      if (t.includes("data") || t.includes("analytics") || t.includes("power bi")) tags.push({ label: "Data", cls: "tag-data" });
+      if (t.includes("monitor") || t.includes("evaluat") || t.includes("m&e") || t.includes("impact")) tags.push({ label: "M&E", cls: "tag-me" });
+      tags.push({ label: "Remote", cls: "tag-remote" });
+      return tags;
+    }
+
+    function renderJobs(jobs) {
+      const container = document.getElementById("jobs-container");
+      if (!jobs.length) {
+        container.innerHTML = `<div class="no-results">No jobs found. Try a different filter.</div>`;
+        return;
+      }
+      container.innerHTML = jobs.map(j => {
+        const tags = categorize(j.title);
+        return `
+          <div class="job-card">
+            <div class="job-title"><a href="${j.jobUrl || '#'}" target="_blank">${j.title || 'Untitled Role'}</a></div>
+            <div class="job-meta">🏢 ${j.companyName || 'Unknown'} &nbsp;|&nbsp; 📍 ${j.location || 'Remote'} &nbsp;|&nbsp; 🗓 ${j.datePosted || 'N/A'}</div>
+            <div>${tags.map(t => `<span class="tag ${t.cls}">${t.label}</span>`).join('')}</div>
+          </div>`;
+      }).join("");
+    }
+
+    function filterAndRender() {
+      const q = document.getElementById("search").value.toLowerCase();
+      const cat = document.getElementById("category").value.toLowerCase();
+      const sort = document.getElementById("sort").value;
+
+      let filtered = allJobs.filter(j => {
+        const text = `${j.title} ${j.companyName} ${j.location}`.toLowerCase();
+        const matchQ = !q || text.includes(q);
+        const matchCat = !cat || (j.title || "").toLowerCase().includes(cat === "m&e" ? "evaluat" : cat);
+        return matchQ && matchCat;
+      });
+
+      if (sort === "oldest") filtered.reverse();
+      renderJobs(filtered);
+    }
+
+    fetch("data/jobs.json")
+      .then(res => res.json())
+      .then(jobs => {
+        allJobs = jobs;
+        const updated = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+        document.getElementById("stats").textContent = `✅ ${jobs.length} opportunities found · Last updated: ${updated}`;
+        renderJobs(jobs);
+      })
+      .catch(() => {
+        document.getElementById("stats").textContent = "⚠️ Could not load jobs. Run the workflow first.";
+      });
+
+    document.getElementById("search").addEventListener("input", filterAndRender);
+    document.getElementById("category").addEventListener("change", filterAndRender);
+    document.getElementById("sort").addEventListener("change", filterAndRender);
+  </script>
+</body>
+</html>
