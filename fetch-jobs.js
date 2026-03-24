@@ -16,15 +16,25 @@ let allJobs = [];
 
 for (const keyword of searches) {
   const input = {
-    countryCode: "us",
-    keyword: keyword,
-    maxResults: 20,
+    countryName: "usa",
+    includeKeyword: keyword,
+    pagesToFetch: 3,
   };
 
   try {
-    const run = await client.actor("apify/google-jobs-scraper").call(input);
+    const run = await client.actor("orgupdate/google-jobs-scraper").call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    allJobs = [...allJobs, ...items];
+
+    // Normalize field names to match what index.html expects
+    const normalized = items.map(item => ({
+      title: item.job_title || item.title || "Untitled",
+      companyName: item.company_name || item.companyName || "Unknown",
+      location: item.location || "Remote",
+      datePosted: item.date || item.datePosted || "N/A",
+      jobUrl: item.URL || item.jobUrl || "#",
+    }));
+
+    allJobs = [...allJobs, ...normalized];
     console.log(`Fetched ${items.length} jobs for: ${keyword}`);
   } catch (err) {
     console.error(`Failed for "${keyword}":`, err.message);
